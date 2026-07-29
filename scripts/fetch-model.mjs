@@ -15,13 +15,8 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-// TODO: MODEL_OWNER/MODEL_REPO currently point at the pre-split repo name
-// ("thoughtorganizer") because that's where intent-recovery-model-v0.1.0
-// was actually published, before the rename in PDR-003-migration-plan.md
-// step 10. Update MODEL_REPO to "intent-recovery-model" once that rename
-// has happened and this has been re-verified against the renamed repo.
 const MODEL_OWNER = "ThisIsJohnnyt";
-const MODEL_REPO = "thoughtorganizer";
+const MODEL_REPO = "intent-recovery-model";
 const MODEL_RELEASE = process.argv[2] ?? "intent-recovery-model-v0.1.0";
 const MODEL_DIR = "thoughtorganizer-flan-t5"; // matches training/export_onnx.py's output_name
 const INSTALL_DIR = path.resolve("public", "models", MODEL_DIR);
