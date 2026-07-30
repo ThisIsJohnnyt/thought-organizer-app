@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import '../styles/HistoryPanel.css'
 
 interface OrganizedNote {
@@ -22,6 +22,17 @@ interface HistoryPanelProps {
 export default function HistoryPanel({ notes }: HistoryPanelProps) {
   const [selectedNote, setSelectedNote] = useState<SavedNote | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedNote?.audioBlob) {
+      setAudioUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(selectedNote.audioBlob)
+    setAudioUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [selectedNote])
 
   const filteredNotes = notes.filter(
     (note) =>
@@ -85,12 +96,9 @@ export default function HistoryPanel({ notes }: HistoryPanelProps) {
             <>
               <div className="detail-header">
                 <h3>Note from {formatDate(selectedNote.timestamp)}</h3>
-                {selectedNote.audioBlob && (
+                {audioUrl && (
                   <audio controls>
-                    <source
-                      src={URL.createObjectURL(selectedNote.audioBlob)}
-                      type="audio/webm"
-                    />
+                    <source src={audioUrl} type="audio/webm" />
                   </audio>
                 )}
               </div>

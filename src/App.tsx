@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import InputPanel from './components/InputPanel'
+import type { TranscriptionStatus } from './components/InputPanel'
 import ProcessingView from './components/ProcessingView'
 import OrganizedNotesView from './components/OrganizedNotesView'
 import HistoryPanel from './components/HistoryPanel'
+import type { TranscriptionErrorCode } from './workers/whisperProtocol'
 import './App.css'
 
 interface OrganizedNote {
@@ -30,6 +32,15 @@ export default function App() {
   const [processingProgress, setProcessingProgress] = useState(0)
   const [processingMessage, setProcessingMessage] = useState('')
 
+  // Voice recording state lives in InputPanel; App only needs to know
+  // whether it's active so it can keep the History tab from unmounting
+  // InputPanel (and orphaning the recording/transcription) mid-flight.
+  const [isRecording, setIsRecording] = useState(false)
+  const [transcriptionStatus, setTranscriptionStatus] = useState<TranscriptionStatus>('idle')
+  const [transcriptionProgress, setTranscriptionProgress] = useState(0)
+  const [transcriptionMessage, setTranscriptionMessage] = useState('')
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null)
+
   useEffect(() => {
     loadSavedNotes()
   }, [])
@@ -48,8 +59,60 @@ export default function App() {
     setCurrentInput(text)
   }
 
+  const runTranscription = async (audio: Blob) => {
+    // Computed once, up front -- never re-prepended as later partial
+    // transcripts stream in, so an already-typed note is preserved rather
+    // than duplicated on every progress update.
+    const prefix = currentInput.trim() ? `${currentInput}\n\n` : ''
+
+    setTranscriptionStatus('transcribing')
+    setTranscriptionProgress(0)
+    setTranscriptionMessage('')
+    setTranscriptionError(null)
+
+    const { streamTranscription, TranscriptionError } = await import(
+      './services/transcriptionService'
+    )
+
+    try {
+      for await (const partial of streamTranscription(audio, (progress, message) => {
+        setTranscriptionProgress(progress)
+        setTranscriptionMessage(message)
+      })) {
+        setCurrentInput(prefix + partial)
+      }
+      setTranscriptionStatus('idle')
+    } catch (err) {
+      console.error('Transcription failed:', err)
+      if (err instanceof TranscriptionError && err.code === 'cancelled') {
+        setTranscriptionStatus('idle')
+        return
+      }
+      setTranscriptionStatus('error')
+      setTranscriptionError(
+        err instanceof TranscriptionError
+          ? describeTranscriptionError(err.code)
+          : describeTranscriptionError('unknown')
+      )
+      // currentAudio is intentionally left untouched here -- the recording
+      // must never be lost just because transcription failed.
+    }
+  }
+
   const handleAudioCapture = (audio: Blob) => {
     setCurrentAudio(audio)
+    runTranscription(audio)
+  }
+
+  const handleRetryTranscription = () => {
+    if (currentAudio) {
+      runTranscription(currentAudio)
+    }
+  }
+
+  const handleDismissTranscriptionError = () => {
+    setTranscriptionStatus('idle')
+    setTranscriptionError(null)
   }
 
   const handleProcess = async () => {
@@ -95,6 +158,8 @@ export default function App() {
         // Clear input
         setCurrentInput('')
         setCurrentAudio(null)
+        setTranscriptionStatus('idle')
+        setTranscriptionError(null)
       }
     } catch (err) {
       console.error('Processing failed:', err)
@@ -110,7 +175,11 @@ export default function App() {
     setCurrentInput('')
     setCurrentAudio(null)
     setOrganizedNotes(null)
+    setTranscriptionStatus('idle')
+    setTranscriptionError(null)
   }
+
+  const isVoiceBusy = isRecording || transcriptionStatus === 'transcribing'
 
   return (
     <div className="app">
@@ -130,6 +199,8 @@ export default function App() {
           <button
             className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
             onClick={() => setActiveTab('history')}
+            disabled={isVoiceBusy}
+            title={isVoiceBusy ? 'Finish recording/transcribing before switching tabs' : undefined}
           >
             History ({savedNotes.length})
           </button>
@@ -145,6 +216,13 @@ export default function App() {
                 hasAudio={!!currentAudio}
                 onProcess={handleProcess}
                 isProcessing={isProcessing}
+                transcriptionStatus={transcriptionStatus}
+                transcriptionProgress={transcriptionProgress}
+                transcriptionMessage={transcriptionMessage}
+                transcriptionError={transcriptionError}
+                onRetryTranscription={handleRetryTranscription}
+                onDismissTranscriptionError={handleDismissTranscriptionError}
+                onRecordingChange={setIsRecording}
               />
             ) : isProcessing ? (
               <ProcessingView
@@ -170,6 +248,21 @@ export default function App() {
       </footer>
     </div>
   )
+}
+
+function describeTranscriptionError(code: TranscriptionErrorCode): string {
+  switch (code) {
+    case 'decode-failed':
+      return "We couldn't read that recording. You can still play it back, or type your thoughts manually below."
+    case 'model-load-failed':
+      return "Speech-to-text isn't available right now. You can type your thoughts manually below."
+    case 'inference-failed':
+      return 'Something went wrong while transcribing. You can retry, or type your thoughts manually below.'
+    case 'cancelled':
+    case 'unknown':
+    default:
+      return 'Something went wrong while transcribing. You can retry, or type your thoughts manually below.'
+  }
 }
 
 // IndexedDB helpers

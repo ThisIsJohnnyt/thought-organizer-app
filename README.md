@@ -27,7 +27,8 @@ takes that raw input (voice or text) and recovers:
 ## ✨ Features
 
 - **Voice & Text Input** — record thoughts or type them, no need to
-  organize as you go
+  organize as you go. Recordings are transcribed on-device (Whisper) into
+  the same editable textarea, so you can fix anything before organizing
 - **On-Device AI** — runs entirely in your browser via `@xenova/transformers`,
   no server, no account
 - **Privacy First** — nothing you write is ever sent anywhere
@@ -47,7 +48,9 @@ takes that raw input (voice or text) and recovers:
 
 ```bash
 npm install --ignore-scripts
-npm run fetch-model   # downloads the current model release into public/models/
+npm run bundle-ort-wasm      # copies ONNX Runtime's .wasm binaries locally (no CDN fetch)
+npm run fetch-model          # downloads the current organizer model release into public/models/
+npm run fetch-whisper-model  # downloads the Whisper speech-to-text model into public/models/
 npm run dev
 ```
 
@@ -55,8 +58,14 @@ The app opens at `http://localhost:5173`.
 
 `npm run fetch-model` downloads, checksum-verifies, and installs the
 current [Intent Recovery Model release](https://github.com/ThisIsJohnnyt/intent-recovery-model/releases) —
-see [`scripts/fetch-model.mjs`](scripts/fetch-model.mjs). The downloaded
-model is gitignored, not committed.
+see [`scripts/fetch-model.mjs`](scripts/fetch-model.mjs). `npm run
+fetch-whisper-model` does the same for the on-device Whisper model, pulled
+directly from its public Hugging Face repo (see
+[`scripts/fetch-whisper-model.mjs`](scripts/fetch-whisper-model.mjs)).
+`npm run bundle-ort-wasm` copies ONNX Runtime's `.wasm` binaries out of
+`node_modules` so neither model needs to fetch them from a CDN at runtime
+(see [`scripts/bundle-ort-wasm.mjs`](scripts/bundle-ort-wasm.mjs)). All
+three downloads are gitignored, not committed.
 
 ### Building for Production
 
@@ -67,7 +76,9 @@ npm run preview
 
 ## 📖 How to Use
 
-1. **Enter your thoughts** — type in the textarea, or record a voice note
+1. **Enter your thoughts** — type in the textarea, or record a voice note.
+   Recordings are transcribed on-device and dropped into the same textarea,
+   editable before you move on
 2. **Click "Organize My Thoughts"** — processed entirely on your device
 3. **Review the output** — switch between Narrative, Key Points, and
    Action Items views
@@ -82,9 +93,13 @@ npm run preview
 
 ### Model integration
 - `@xenova/transformers` for in-browser ONNX inference
-- The model itself, its training data, and its evaluation methodology are
-  maintained independently — see
+- The organizer model itself, its training data, and its evaluation
+  methodology are maintained independently — see
   [intent-recovery-model](https://github.com/ThisIsJohnnyt/intent-recovery-model)
+- Voice transcription uses a separate, stock (not fine-tuned) Whisper
+  model (`whisper-base.en`) run in a Web Worker, so a multi-minute
+  recording doesn't block the UI. English-only for now, matching the
+  organizer model's language
 - This app depends only on
   [Intent Recovery Inference Contract v1](https://github.com/ThisIsJohnnyt/intent-recovery-model/blob/main/docs/inference-contract.md), not
   the model's internal format — a future model release can change its
@@ -105,13 +120,20 @@ src/
 │   └── App.tsx
 ├── services/
 │   ├── noteOrganizer.ts        # Orchestration
-│   └── modelLoader.ts          # transformers.js setup
+│   ├── modelLoader.ts          # transformers.js setup (organizer model)
+│   └── transcriptionService.ts # Main-thread facade for the Whisper worker
+├── workers/
+│   ├── whisperWorker.ts        # Runs the Whisper pipeline off the main thread
+│   └── whisperProtocol.ts      # Worker <-> main-thread message types
 ├── utils/
 │   ├── outputParser.ts         # Parses model output into the contract shape
-│   └── tokenization.ts         # Chunking for long inputs
+│   ├── tokenization.ts         # Chunking for long inputs
+│   └── audioDecode.ts          # Recorded audio -> mono 16kHz PCM for Whisper
 └── styles/
 scripts/
-└── fetch-model.mjs             # Downloads + verifies a model release
+├── fetch-model.mjs             # Downloads + verifies the organizer model release
+├── fetch-whisper-model.mjs     # Downloads + verifies the Whisper model
+└── bundle-ort-wasm.mjs         # Copies ONNX Runtime's .wasm files locally
 ```
 
 ## 🛠️ Tech Stack
@@ -124,7 +146,7 @@ scripts/
 | Model | [intent-recovery-model](https://github.com/ThisIsJohnnyt/intent-recovery-model) (FLAN-T5-base, fine-tuned) |
 | Storage | IndexedDB |
 | Styling | CSS3 (no framework) |
-| Voice | Web Speech API |
+| Voice transcription | Whisper (`whisper-base.en`), on-device via `@xenova/transformers` |
 
 ## 🧪 Browser Support
 
