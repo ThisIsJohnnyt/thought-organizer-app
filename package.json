@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "fetch-model": "node scripts/fetch-model.mjs",
+    "fetch-whisper-model": "node scripts/fetch-whisper-model.mjs",
+    "bundle-ort-wasm": "node scripts/bundle-ort-wasm.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"

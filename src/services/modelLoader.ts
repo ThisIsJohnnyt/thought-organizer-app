@@ -9,6 +9,10 @@ const MODEL_NAME = 'thoughtorganizer-flan-t5'
 env.allowLocalModels = true
 env.allowRemoteModels = false
 env.localModelPath = '/models/'
+// Without this, onnxruntime-web's .wasm binaries default to a jsDelivr CDN
+// URL, which would quietly contradict "no data is sent to servers" the
+// first time this pipeline runs. Bundled locally by scripts/bundle-ort-wasm.mjs.
+env.backends.onnx.wasm.wasmPaths = '/ort-wasm/'
 
 let cachedModel: any = null
 let modelLoadingPromise: Promise<any> | null = null

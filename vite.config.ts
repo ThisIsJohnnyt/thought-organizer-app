@@ -10,5 +10,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false
+  },
+  // @xenova/transformers uses dynamic import() internally to pick its ONNX
+  // Runtime backend -- Vite's default IIFE worker output doesn't support
+  // that, so the whisper transcription worker needs ES module output.
+  worker: {
+    format: 'es'
   }
 })
