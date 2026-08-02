@@ -22,17 +22,19 @@ import ts from 'typescript'
 
 const EXPECTED_CONTRACT_VERSION = 'source-determined-bullets-v1'
 
-// Fixed fixture (UTF-8, LF line endings). Do not change this string without
-// coordinating the identical change to the training-side fixture -- the
+// Fixed fixture (UTF-8, LF line endings). This is the exact ASCII fixture
+// specified by intent-recovery-model's training/REAL_DATA_EVALUATION_PROTOCOL.md
+// ("Prompt-contract fingerprint" section) and pinned as PROMPT_CONTRACT_FIXTURE
+// in that repo's training/real_data_private.py. Do not change this string
+// without coordinating the identical change on the training side -- the
 // SHA-256 comparison is only meaningful if both sides render the same input.
-const FIXTURE_RAW_INPUT =
-  'worried about the project deadline tomorrow\nneed to call mom this week'
+const FIXTURE_RAW_INPUT = 'Prompt contract fixture: review the blue folder tomorrow?'
 
 // Pinned against the current promptContract.ts. Update this only in the
 // same change that intentionally updates the prompt contract, alongside a
 // PROMPT_CONTRACT_VERSION bump and the matching training-side change.
 const EXPECTED_SHA256 =
-  'b3a7b9e8ddaaa390ab656028276ee0ab8e07700b8b531859a53735c1b59b2e01'
+  '161661198071fd81310681f69381ec8e0287141e1e75b09d3a342414af31ccf1'
 
 async function loadPromptContract() {
   const sourcePath = path.resolve('src/services/promptContract.ts')
