@@ -11,9 +11,14 @@ node_modules/
 /build
 
 # Downloaded model artifacts (fetched by scripts/fetch-model.mjs from an
-# intent-recovery-model GitHub Release -- never committed, see
-# docs/inference-contract.md and MODEL_INTEGRATION.md)
+# intent-recovery-model GitHub Release, and scripts/fetch-whisper-model.mjs
+# from Hugging Face -- never committed, see docs/inference-contract.md and
+# MODEL_INTEGRATION.md)
 /public/models/
+
+# ONNX Runtime WASM binaries, copied from node_modules by
+# scripts/bundle-ort-wasm.mjs -- build artifact, not source
+/public/ort-wasm/
 
 # Misc
 .DS_Store
