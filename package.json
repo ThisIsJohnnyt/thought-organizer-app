@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "fetch-model": "node scripts/fetch-model.mjs",
+    "verify-prompt-contract": "node scripts/verify-prompt-contract.mjs",
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && node scripts/verify-prompt-contract.mjs && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

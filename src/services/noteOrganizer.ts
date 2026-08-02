@@ -1,25 +1,9 @@
 import { loadModel, streamFromModel } from './modelLoader'
 import { parseModelOutput } from '../utils/outputParser'
 import { intelligentChunk, estimateTokens } from '../utils/tokenization'
+import { SYSTEM_PROMPT, USER_PROMPT_TEMPLATE, buildPrompt } from './promptContract'
 
-const SYSTEM_PROMPT = `You are a compassionate AI assistant helping someone organize scattered, fragmented thoughts written under real-world conditions like time pressure, interruption, or fatigue.
-
-The user has provided messy, non-linear thoughts below. Your job is to transform them into three clear, organized views that reduce anxiety and improve clarity.`
-
-// Plain delimited text, not JSON: testing showed FLAN-T5-base reliably gets
-// the *content* right after fine-tuning, but a small model frequently loses
-// track of bracket/quote nesting on a JSON array (fails ~50% of the time
-// even on memorized training examples). Marker lines degrade gracefully —
-// a mistake in one section doesn't invalidate the whole response the way an
-// unbalanced bracket does.
-const USER_PROMPT_TEMPLATE = `Respond with exactly this format, using these three section markers each on their own line, with no other text before or after:
-
-###NARRATIVE###
-a coherent, flowing narrative that groups related ideas, keeps the original meaning and tone, and reads less anxiety-inducing than the raw thoughts
-###BULLETS###
-one bullet per source-supported key idea; use as many as the note supports, up to seven; do not duplicate or invent content to reach a minimum
-###ACTIONS###
-one task per line; leave this section empty if there are no tasks`
+export { PROMPT_CONTRACT_VERSION } from './promptContract'
 
 interface OrganizedNote {
   narrative: string
@@ -62,7 +46,7 @@ async function* processSinglePass(
 ): AsyncGenerator<OrganizedNote> {
   onProgress(30, 'Generating organized narrative...')
 
-  const prompt = `${SYSTEM_PROMPT}\n\nUSER'S RAW THOUGHTS:\n${input}\n\n${USER_PROMPT_TEMPLATE}`
+  const prompt = buildPrompt(input)
 
   let fullOutput = ''
   let tokenCount = 0
