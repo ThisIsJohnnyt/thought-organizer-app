@@ -90,6 +90,29 @@ npm run preview
   the model's internal format — a future model release can change its
   internals freely as long as the contract's major version holds
 
+### Model provenance
+
+The exact weights currently deployed are always recoverable independent of
+this repo and independent of the training repo's local checkpoint
+directory: [`scripts/fetch-model.mjs`](scripts/fetch-model.mjs) pins a
+specific GitHub Release tag on
+[intent-recovery-model's releases](https://github.com/ThisIsJohnnyt/intent-recovery-model/releases)
+(currently `intent-recovery-model-v0.1.0`), and that release's
+`<tag>.manifest.json` asset records a SHA-256 + byte-length for every model
+file. Since release assets are immutable once published, that manifest
+*is* the deployed model's permanent fingerprint record — no separate
+provenance tracking needed on this side.
+
+Verified 2026-07-30: every file in a freshly-installed copy
+(`npm run fetch-model`) hashes identically to the pinned release's
+manifest, and the manifest's `training_datasets` field
+(`gold-v1.0` through `gold-v1.2.1`) is consistent with this release being
+the `gold_v1.2.1`/checkpoint-520 model referenced in the training repo's
+`datasets/gold/CHANGELOG.md`. If a future release changes what's deployed,
+update the tag in `fetch-model.mjs` — the manifest for whichever tag is
+currently pinned there is always the authoritative answer to "what's
+actually deployed right now."
+
 ### Storage
 - IndexedDB, local-only: raw input, organized output, recordings, metadata
 
