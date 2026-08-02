@@ -17,7 +17,7 @@ const USER_PROMPT_TEMPLATE = `Respond with exactly this format, using these thre
 ###NARRATIVE###
 a coherent, flowing narrative that groups related ideas, keeps the original meaning and tone, and reads less anxiety-inducing than the raw thoughts
 ###BULLETS###
-one key idea per line, 3 to 7 lines
+one bullet per source-supported key idea; use as many as the note supports, up to seven; do not duplicate or invent content to reach a minimum
 ###ACTIONS###
 one task per line; leave this section empty if there are no tasks`
 
