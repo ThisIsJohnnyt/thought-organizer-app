@@ -1,0 +1,84 @@
+{
+  "_comment": "Shared frozen fixture set for the v2-candidate parser, consumed identically by training/test_prompt_contract_v2_candidate.py and thought-organizer-app/src/services/promptContractV2Parser.test.ts. A byte-identical copy is committed in both repos, with a dedicated test in each confirming the two copies match -- avoids a fragile cross-repo relative-path dependency while still proving true parity on a single frozen source of truth, not independently-authored test data that could silently drift.",
+  "valid_cases": [
+    {
+      "id": "basic-two-bullets-one-action",
+      "input": "###NARRATIVE### coherent narrative ###BULLETS### ###BULLET### first idea ###BULLET### second idea ###ACTIONS### ###ACTION### first task",
+      "expected": {
+        "narrative": "coherent narrative",
+        "bullets": ["first idea", "second idea"],
+        "actions": ["first task"]
+      }
+    },
+    {
+      "id": "zero-bullets-zero-actions",
+      "input": "###NARRATIVE### just an observation ###BULLETS### ###ACTIONS###",
+      "expected": { "narrative": "just an observation", "bullets": [], "actions": [] }
+    },
+    {
+      "id": "seven-bullets-eight-actions-ceiling",
+      "input": "###NARRATIVE### dense note ###BULLETS### ###BULLET### one ###BULLET### two ###BULLET### three ###BULLET### four ###BULLET### five ###BULLET### six ###BULLET### seven ###ACTIONS### ###ACTION### a ###ACTION### b ###ACTION### c ###ACTION### d ###ACTION### e ###ACTION### f ###ACTION### g ###ACTION### h",
+      "expected": {
+        "narrative": "dense note",
+        "bullets": ["one", "two", "three", "four", "five", "six", "seven"],
+        "actions": ["a", "b", "c", "d", "e", "f", "g", "h"]
+      }
+    },
+    {
+      "id": "single-bullet-with-hyphen-and-word-bullet-in-text",
+      "input": "###NARRATIVE### text ###BULLETS### ###BULLET### remember the bullet-point action items ###ACTIONS###",
+      "expected": {
+        "narrative": "text",
+        "bullets": ["remember the bullet-point action items"],
+        "actions": []
+      }
+    }
+  ],
+  "error_cases": [
+    {
+      "id": "missing-actions-marker",
+      "input": "###NARRATIVE### text ###BULLETS### ###BULLET### x",
+      "expect_error_contains": "missing required marker"
+    },
+    {
+      "id": "duplicated-narrative-marker",
+      "input": "###NARRATIVE### text ###NARRATIVE### dup ###BULLETS### ###ACTIONS###",
+      "expect_error_contains": "duplicated marker"
+    },
+    {
+      "id": "reordered-markers",
+      "input": "###BULLETS### ###NARRATIVE### text ###ACTIONS###",
+      "expect_error_contains": "out of order"
+    },
+    {
+      "id": "text-before-narrative",
+      "input": "stray text ###NARRATIVE### text ###BULLETS### ###ACTIONS###",
+      "expect_error_contains": "unexpected text before"
+    },
+    {
+      "id": "empty-narrative",
+      "input": "###NARRATIVE### ###BULLETS### ###ACTIONS###",
+      "expect_error_contains": "narrative section is empty"
+    },
+    {
+      "id": "cross-section-leakage-action-in-bullets",
+      "input": "###NARRATIVE### text ###BULLETS### ###ACTION### wrong section ###ACTIONS###",
+      "expect_error_contains": "cross-section leakage"
+    },
+    {
+      "id": "cross-section-leakage-bullet-in-actions",
+      "input": "###NARRATIVE### text ###BULLETS### ###ACTIONS### ###BULLET### wrong section",
+      "expect_error_contains": "cross-section leakage"
+    },
+    {
+      "id": "bare-content-no-item-marker",
+      "input": "###NARRATIVE### text ###BULLETS### bare bullet text no marker ###ACTIONS###",
+      "expect_error_contains": "no ###BULLET### markers"
+    },
+    {
+      "id": "empty-bullet-item",
+      "input": "###NARRATIVE### text ###BULLETS### ###BULLET###    ###ACTIONS###",
+      "expect_error_contains": "empty ###BULLET### item"
+    }
+  ]
+}
