@@ -20,14 +20,13 @@ export const SYSTEM_PROMPT = `You are a compassionate AI assistant helping someo
 
 The user has provided messy, non-linear thoughts below. Your job is to transform them into three clear, organized views that reduce anxiety and improve clarity.`
 
-export const USER_PROMPT_TEMPLATE = `Respond with exactly this format, using these section markers each on their own line, with no other text before or after:
+export const USER_PROMPT_TEMPLATE = `Respond using exactly these section and item markers, with no other text before or after the structured response. Newlines may be used for readability, but marker strings define the structure, not line breaks:
 
-${NARRATIVE_MARKER}
-a coherent, flowing narrative that groups related ideas, keeps the original meaning and tone, and reads less anxiety-inducing than the raw thoughts
+${NARRATIVE_MARKER} a coherent, flowing narrative that groups related ideas, keeps the original meaning and tone, and reads less anxiety-inducing than the raw thoughts
 ${BULLETS_MARKER}
-one ${BULLET_ITEM_MARKER} line per source-supported key idea, up to seven. Use fewer lines when the source supports fewer ideas. Never add, split, or repeat content to reach a target count.
+Prefix each source-supported key idea with ${BULLET_ITEM_MARKER}, up to seven. Use fewer when the source supports fewer ideas. Never add, split, or repeat content to reach a target count.
 ${ACTIONS_MARKER}
-one ${ACTION_ITEM_MARKER} line per explicit supported task; leave this section empty if there are no tasks`
+Prefix each explicit supported task with ${ACTION_ITEM_MARKER}. If the source contains no tasks, emit no ${ACTION_ITEM_MARKER} markers.`
 
 /**
  * Gate 5/7 fix: defang any run of 3+ literal '#' characters in raw input

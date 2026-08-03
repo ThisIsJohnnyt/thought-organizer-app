@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared frozen fixture set for the v2-candidate parser, consumed identically by training/test_prompt_contract_v2_candidate.py and thought-organizer-app/src/services/promptContractV2Parser.test.ts. A byte-identical copy is committed in both repos, with a dedicated test in each confirming the two copies match -- avoids a fragile cross-repo relative-path dependency while still proving true parity on a single frozen source of truth, not independently-authored test data that could silently drift.",
+  "_comment": "Shared frozen fixture set for the v2-candidate parser, consumed identically by training/test_prompt_contract_v2_candidate.py and thought-organizer-app/src/services/promptContractV2Parser.test.ts. A copy is committed in both repos. Parity is proven by a canonical-JSON SHA-256 fingerprint (sorted object keys, preserved array order) computed independently in each repo and compared against a single locked hash value -- not a cross-repo relative-path read (breaks under different machine layouts/worktrees) and not raw-byte identity (Windows git autocrlf CRLF-normalizes the training repo's committed copy, which is a line-ending difference, not a content one).",
   "valid_cases": [
     {
       "id": "basic-two-bullets-one-action",
@@ -11,7 +11,8 @@
       }
     },
     {
-      "id": "zero-bullets-zero-actions",
+      "id": "zero-bullets-zero-actions-parser-only",
+      "_note": "Proves the parser can structurally accept empty BULLETS/ACTIONS sections. Not a claim about real semantic acceptance -- a nonempty observation is expected to yield at least one bullet under the acceptance rubric; that expectation is a scoring-layer concern, not something this structural parser fixture asserts either way.",
       "input": "###NARRATIVE### just an observation ###BULLETS### ###ACTIONS###",
       "expected": { "narrative": "just an observation", "bullets": [], "actions": [] }
     },

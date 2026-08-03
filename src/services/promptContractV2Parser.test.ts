@@ -8,6 +8,7 @@
 
 import * as fs from 'fs'
 import * as path from 'path'
+import * as crypto from 'crypto'
 import { parseOutput, ParseError } from './promptContractV2Parser'
 import { sanitizeMarkerLikeText, NARRATIVE_MARKER, BULLETS_MARKER, BULLET_ITEM_MARKER, ACTIONS_MARKER } from './promptContractV2Candidate'
 
@@ -25,28 +26,48 @@ function check(name: string, condition: boolean, detail = ''): void {
 // its own fixture file until this was fixed). This script is always run
 // from the app repo root (see the usage comment above), so cwd is stable.
 const FIXTURES_PATH = path.resolve(process.cwd(), 'src', 'services', 'prompt_contract_v2_parser_fixtures.json')
-const TRAINING_FIXTURES_PATH = path.resolve(
-  process.cwd(), '..', 'DeepThoughts', 'training', 'prompt_contract_v2_parser_fixtures.json'
-)
+
+// Finding 5 fix (prompt_contract_vnext_static_package_chatgpt_review.md): a
+// cross-repo relative path (../../DeepThoughts/training/...) breaks under
+// any machine layout or worktree where the two repos aren't checked out as
+// siblings with matching names -- confirmed by ChatGPT reproducing exactly
+// this failure. Fixed by comparing a canonical-JSON SHA-256 fingerprint
+// (sorted object keys, preserved array order) against a single locked
+// value, computed independently in each repo -- no path dependency at all.
+// Must match training/test_prompt_contract_v2_candidate.py's
+// canonical_json_fingerprint() byte-for-byte: same key sort, same ':'/','
+// separators with no extra whitespace, same UTF-8 encoding.
+const EXPECTED_FIXTURES_FINGERPRINT = '52867b1c6920a00b835cab1c8bc4bf495a4f54b8cf6d80df401b5a5f39969948'
+
+function canonicalStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return '[' + value.map(canonicalStringify).join(',') + ']'
+  }
+  if (value !== null && typeof value === 'object') {
+    const keys = Object.keys(value as Record<string, unknown>).sort()
+    return '{' + keys.map((k) => JSON.stringify(k) + ':' + canonicalStringify((value as Record<string, unknown>)[k])).join(',') + '}'
+  }
+  return JSON.stringify(value)
+}
+
+function canonicalJsonFingerprint(data: unknown): string {
+  const canonical = canonicalStringify(data)
+  return crypto.createHash('sha256').update(canonical, 'utf8').digest('hex')
+}
 
 interface Fixtures {
   valid_cases: { id: string; input: string; expected: { narrative: string; bullets: string[]; actions: string[] } }[]
   error_cases: { id: string; input: string; expect_error_contains: string }[]
 }
 
-function testFixtureFileContentIdenticalAcrossRepos(): void {
-  // Structural (parsed JSON) comparison, not raw bytes: the training
-  // repo's committed copy gets CRLF-normalized by Windows git autocrlf on
-  // checkout while this repo's copy stays LF -- confirmed directly, a real
-  // line-ending difference, not a content one. Compares parsed content,
-  // which is what actually needs to match.
-  if (!fs.existsSync(TRAINING_FIXTURES_PATH)) {
-    check('fixture file content-identical across repos', false, `training-side copy not found at ${TRAINING_FIXTURES_PATH}`)
-    return
-  }
-  const appData = JSON.parse(fs.readFileSync(FIXTURES_PATH, 'utf8'))
-  const trainingData = JSON.parse(fs.readFileSync(TRAINING_FIXTURES_PATH, 'utf8'))
-  check('fixture file content-identical across repos', JSON.stringify(appData) === JSON.stringify(trainingData))
+function testFixtureFileMatchesLockedCanonicalFingerprint(): void {
+  const data = JSON.parse(fs.readFileSync(FIXTURES_PATH, 'utf8'))
+  const fingerprint = canonicalJsonFingerprint(data)
+  check(
+    'fixture file matches locked canonical cross-repo fingerprint',
+    fingerprint === EXPECTED_FIXTURES_FINGERPRINT,
+    fingerprint
+  )
 }
 
 function testValidFixtureCases(): void {
@@ -98,7 +119,7 @@ function testSanitizedInputCannotReachParserAsRealMarker(): void {
   )
 }
 
-testFixtureFileContentIdenticalAcrossRepos()
+testFixtureFileMatchesLockedCanonicalFingerprint()
 testValidFixtureCases()
 testErrorFixtureCases()
 testSanitizerDefangsAllRunLengths()
